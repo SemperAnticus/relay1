@@ -1,25 +1,62 @@
-import logo from './logo.svg';
-import './App.css';
+import React from "react";
+import "./App.css";
+import graphql from "babel-plugin-relay/macro";
+import { RelayEnvironmentProvider, loadQuery, usePreloadedQuery, usePaginationFragment } from "react-relay/hooks";
+import RelayEnvironment from "./RelayEnvironment";
+import { AnimeCard } from "./components/AnimeCard";
 
-function App() {
+const { Suspense } = React;
+
+const RepositoryNameQuery = graphql`
+  query AppPageQuery {
+    Page {
+      media(isAdult: false, sort: POPULARITY_DESC) {
+        _id: id
+        siteUrl
+        title {
+          romaji
+          english
+        }
+        coverImage {
+          large
+        }
+      }
+    }
+  }
+`;
+
+const preloadedQuery = loadQuery(RelayEnvironment, RepositoryNameQuery, {
+  /* query variables */
+});
+
+function App(props) {
+  const data = usePreloadedQuery(RepositoryNameQuery, props.preloadedQuery);
+
+  const animeList = data.Page.media;
   return (
     <div className="App">
       <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
+        <h3>Топ популярных аниме</h3>
       </header>
+      <div
+        style={{ display: "flex", alignItems: "center", overflowY: "hidden", overflowX: "scroll", height: 500 }}
+      >
+        {animeList.map((anime) => (
+          <AnimeCard anime={anime} />
+        ))}
+      </div>
     </div>
   );
 }
 
-export default App;
+function AppRoot(props) {
+  return (
+    <RelayEnvironmentProvider environment={RelayEnvironment}>
+      <Suspense fallback={"Loading..."}>
+        <App preloadedQuery={preloadedQuery} />
+      </Suspense>
+    </RelayEnvironmentProvider>
+  );
+}
+
+export default AppRoot;
